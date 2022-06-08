@@ -1,10 +1,11 @@
 package com.example.currency;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ArrayData {
 
-    private final Data[] dataList = new Data[] {
+    private final Data[] dataArray = new Data[] {
             new Data(3474, "China - Yuan","¥"),
             new Data(24784, "Europe - Euro","€"),
             new Data(174, "Japan - Yen","¥"),
@@ -18,51 +19,19 @@ public class ArrayData {
             new Data(1,"Vietnam - Dong","₫")
     };
 
-    private final int len = dataList.length;
-
-    public ArrayData() {
-
+    public double calRate(int i, int j) {
+        return dataArray[i].getRate()/dataArray[j].getRate();
     }
 
-    public double[] getArrayRate() {
-
-        double[] rates = new double[len];
-
-        AtomicInteger i = new AtomicInteger();
-
-        for (i.set(0); i.get() < len; i.getAndIncrement()) {
-
-            rates[i.get()] = dataList[i.get()].getRate();
+    public List<String> getTexts() {
+        List<String> texts = new ArrayList<>();
+        for (Data data: dataArray) {
+            texts.add(data.getText());
         }
-
-        return rates;
-    }
-
-    public String[] getArrayText() {
-
-        String[] texts = new String[len];
-
-        AtomicInteger i = new AtomicInteger();
-
-        for (i.set(0); i.get() < len; i.getAndIncrement()) {
-
-            texts[i.get()] = dataList[i.get()].getText();
-        }
-
         return texts;
     }
 
-    public String[] getArrayIcon() {
-
-        String[] icons = new String[len];
-
-        AtomicInteger i = new AtomicInteger();
-
-        for (i.set(0); i.get() < len; i.getAndIncrement()) {
-
-            icons[i.get()] = dataList[i.get()].getIcon();
-        }
-
-        return icons;
+    public String getIcon(int i) {
+        return dataArray[i].getIcon();
     }
 }

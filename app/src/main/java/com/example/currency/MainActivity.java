@@ -7,67 +7,31 @@ import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    private final static ArrayData arrayData = new ArrayData();
-    private final static double[] rates = arrayData.getArrayRate();
-    private final static String[] texts = arrayData.getArrayText();
-    private final static String[] icons = arrayData.getArrayIcon();
-    private final static TextView[] iconViews = new TextView[2];
-    private final static TextView[] textViews = new TextView[2];
+    private final static ArrayData dataArray = new ArrayData();
     private final static Element[] elements = new Element[]{
-            new Element(9, rates[9]/rates[10], icons[9]),
-            new Element(10, rates[10]/rates[9], icons[10])
+            new Element(9, dataArray.calRate(9, 10), dataArray.getIcon(9)),
+            new Element(10, dataArray.calRate(10, 9), dataArray.getIcon(10))
     };
-    private final static int BLACK = 0xFF000000, LIGHT_BLACK = 0x80000000;
-
+    private static ArrayAdapter<String> adapter;
     private static int idFocus = 0, idNonFocus = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        textViews[0] = findViewById(R.id.text_0);
-        textViews[1] = findViewById(R.id.text_1);
-        iconViews[0] = findViewById(R.id.icon_0);
-        iconViews[1] = findViewById(R.id.icon_1);
-        textViews[0].setOnClickListener(v -> onClickTextView(0));
-        textViews[1].setOnClickListener(v -> onClickTextView(1));
-
-        Spinner spinner0 = findViewById(R.id.spinner_0);
-        Spinner spinner1 = findViewById(R.id.spinner_1);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, texts);
-        spinner0.setAdapter(adapter);
-        spinner1.setAdapter(adapter);
-        spinner0.setSelection(elements[0].getIndex());
-        spinner1.setSelection(elements[1].getIndex());
-        spinner0.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                onClickSpinner(0, position);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-        spinner1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                onClickSpinner(1, position);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
+        if (savedInstanceState == null) {
+            adapter = new ArrayAdapter<>(this,
+                    android.R.layout.simple_spinner_dropdown_item, dataArray.getTexts());
+        }
+        setTextView(findViewById(R.id.text_0), findViewById(R.id.icon_0), 0);
+        setTextView(findViewById(R.id.text_1), findViewById(R.id.icon_1), 1);
+        setSpinner(findViewById(R.id.spinner_0), 0);
+        setSpinner(findViewById(R.id.spinner_1), 1);
         findViewById(R.id.button_0).setOnClickListener(v-> onClickZero());
         findViewById(R.id.button_1).setOnClickListener(v-> onClickNumber(1));
         findViewById(R.id.button_2).setOnClickListener(v-> onClickNumber(2));
@@ -83,75 +47,87 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.button_dot).setOnClickListener(v-> onClickDot());
     }
 
-    private void onClickZero() {
-        if (!elements[idFocus].getText().equals("0")) {
-            elements[idFocus].appendValue(0);
-            elements[idNonFocus].setValue(elements[idFocus].getRate() * elements[idFocus].getValue());
-            setText();
-        }
+    private void setTextView(TextView textView, TextView iconView, int id) {
+        elements[id].setView(textView, iconView);
+        elements[id].getTextView().setOnClickListener(v -> {
+            if (id != idFocus) {
+                idFocus = id;
+                idNonFocus = 1 - id;
+                setBoldColor();
+            }
+        });
     }
 
-    private void onClickTextView(int id) {
-        if (id != idFocus) {
-            idFocus = id;
-            idNonFocus = 1 - id;
-            textViews[idFocus].setTextColor(BLACK);
-            textViews[idNonFocus].setTextColor(LIGHT_BLACK);
+    private void setSpinner(@NonNull Spinner spinner, int id) {
+        spinner.setAdapter(adapter);
+        spinner.setSelection(elements[id].getIndex());
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> av, View v, int index, long i) {
+                if (index != elements[id].getIndex()) {
+                    elements[id].replaceIcon(index, dataArray.getIcon(index));
+                    elements[id].setRate(dataArray.calRate(index, elements[1 - id].getIndex()));
+                    elements[1 - id].setRate(dataArray.calRate(elements[1 - id].getIndex(), index));
+                    elements[1 - id].setValue(elements[id].calValue());
+                    setText();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> av) {
+
+            }
+        });
+    }
+
+    private void onClickZero() {
+        if (elements[idFocus].appendZero()) {
+            elements[idNonFocus].setValue(elements[idFocus].calValue());
+            setText();
         }
     }
 
     private void onClickNumber(int number) {
         elements[idFocus].appendValue(number);
-        elements[idNonFocus].setValue(elements[idFocus].getRate() * elements[idFocus].getValue());
+        elements[idNonFocus].setValue(elements[idFocus].calValue());
         setText();
     }
 
     private void onClickBS() {
-        if (!elements[idFocus].getText().equals("0")) {
-            elements[idFocus].clearAChar();
-            elements[idNonFocus].setValue(elements[idFocus].getRate() * elements[idFocus].getValue());
+        if (elements[idFocus].clearAChar()) {
+            elements[idNonFocus].setValue(elements[idFocus].calValue());
             setText();
         }
     }
 
     private void onClickCE() {
-        elements[0].clear();
+        elements[idFocus].clear();
         elements[1].clear();
         setText();
     }
 
     private void onClickDot() {
-        if (!elements[idFocus].getHasDot()) {
-            elements[idFocus].appendDot();
+        if (elements[idFocus].appendDot()) {
             setText();
         }
-    }
-
-    private void onClickSpinner(int id, int index) {
-        if (index != elements[id].getIndex()) {
-            elements[id].setIndex(index);
-            elements[id].setIcon(icons[index]);
-            elements[id].setRate(rates[index] / rates[elements[1 - id].getIndex()]);
-            elements[1 - id].setRate(rates[elements[1 - id].getIndex()] / rates[index]);
-            elements[1 - id].setValue(elements[id].getRate() * elements[id].getValue());
-            iconViews[id].setText(icons[index]);
-            setText();
-        }
-    }
-
-    private void setText() {
-        textViews[idFocus].setText(elements[idFocus].getText());
-        textViews[idNonFocus].setText(elements[idNonFocus].getText());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        textViews[idFocus].setText(elements[idFocus].getText());
-        textViews[idNonFocus].setText(elements[idNonFocus].getText());
-        iconViews[idFocus].setText(elements[idFocus].getIcon());
-        iconViews[idNonFocus].setText(elements[idNonFocus].getIcon());
-        textViews[idFocus].setTextColor(BLACK);
-        textViews[idNonFocus].setTextColor(LIGHT_BLACK);
+        setText();
+        elements[idFocus].displayIcon();
+        elements[idNonFocus].displayIcon();
+        setBoldColor();
+    }
+
+    private void setBoldColor() {
+        elements[idFocus].setBoldColor(true);
+        elements[idNonFocus].setBoldColor(false);
+    }
+
+    private void setText() {
+        elements[idFocus].displayText();
+        elements[idNonFocus].displayText();
     }
 }
